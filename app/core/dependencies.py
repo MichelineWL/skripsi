@@ -7,6 +7,7 @@ from app.core.database import get_db
 from app.services.organization_service import OrganizationService
 from app.services.period_service import PeriodService
 from app.services.division_service import DivisionService
+from app.services.program_service import ProgramService
 
 def get_organization_service(
     db: Annotated[Session, Depends(get_db)],
@@ -22,3 +23,8 @@ def get_division_service(
     db: Annotated[Session, Depends(get_db)],
 ) -> DivisionService:
     return DivisionService(db)
+
+def get_program_service(
+    db: Annotated[Session, Depends(get_db)],
+) -> ProgramService:
+    return ProgramService(db)

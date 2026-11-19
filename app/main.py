@@ -4,6 +4,7 @@ from app.core.config import settings
 from app.api.routes.organizations import router as organizations_router
 from app.api.routes.periods import router as periods_router
 from app.api.routes.divisions import router as divisions_router
+from app.api.routes.programs import router as programs_router
 
 app = FastAPI(
     title=settings.app_name,
@@ -15,6 +16,7 @@ app = FastAPI(
 app.include_router(organizations_router)
 app.include_router(periods_router)
 app.include_router(divisions_router)
+app.include_router(programs_router)
 
 @app.get("/health")
 def health_check():
