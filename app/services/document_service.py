@@ -139,8 +139,17 @@ class DocumentService:
         program_id,
         division_id,
     ):
+        # Validate organization
         self._validate_organization(organization_id)
 
+        # Validate period independently, even if no division/program is provided
+        if period_id is not None:
+            self._validate_period(
+                period_id,
+                organization_id,
+            )
+
+        # Validate division context
         if division_id is not None:
             if period_id is None:
                 raise BusinessRuleError(
@@ -153,6 +162,7 @@ class DocumentService:
                 period_id,
             )
 
+        # Validate program context
         if program_id is not None:
             if period_id is None:
                 raise BusinessRuleError(
@@ -181,6 +191,8 @@ class DocumentService:
 
         if organization is None:
             raise ResourceNotFoundError("Organization not found.")
+
+        return organization
 
     def _validate_period(self, period_id, organization_id=None):
         period = self.period_repository.get_by_id(period_id)
