@@ -9,6 +9,7 @@ from app.services.period_service import PeriodService
 from app.services.division_service import DivisionService
 from app.services.program_service import ProgramService
 from app.services.document_service import DocumentService
+from app.services.document_version_service import DocumentVersionService
 
 def get_organization_service(
     db: Annotated[Session, Depends(get_db)],
@@ -34,3 +35,8 @@ def get_document_service(
     db: Annotated[Session, Depends(get_db)],
 ) -> DocumentService:
     return DocumentService(db)
+
+def get_document_version_service(
+    db: Annotated[Session, Depends(get_db)],
+) -> DocumentVersionService:
+    return DocumentVersionService(db)
