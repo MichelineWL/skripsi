@@ -112,7 +112,7 @@ def test_chunk_extracted_content_rechunk_replaces_existing_chunks(db_session):
     # Tidak ada duplicate chunk berdasarkan index
     indexes = [chunk.chunk_index for chunk in persisted_chunks]
     assert len(indexes) == len(set(indexes))
-    
+
 def test_get_chunks_returns_persisted_chunks(db_session):
     extracted_content = create_extracted_content(
         db_session,
@@ -149,3 +149,56 @@ def test_chunk_extracted_content_empty_content(db_session):
 
     with pytest.raises(Exception):
         service.chunk_extracted_content(extracted_content.id)
+
+def test_build_chunks_does_not_persist_chunks(db_session):
+    extracted_content = create_extracted_content(
+        db_session,
+        content="Content for building chunks without persistence.",
+    )
+
+    service = ChunkingService(db_session)
+
+    chunks = service.build_chunks(
+        extracted_content.id
+    )
+
+    assert len(chunks) >= 1
+    assert chunks[0].content == (
+        "Content for building chunks without persistence."
+    )
+
+    persisted_chunks = (
+        db_session.query(Chunk)
+        .filter(
+            Chunk.extracted_content_id
+            == extracted_content.id
+        )
+        .all()
+    )
+
+    assert persisted_chunks == []
+
+
+def test_build_chunks_preserves_chunk_metadata(db_session):
+    extracted_content = create_extracted_content(
+        db_session,
+        content="Metadata test content.",
+    )
+
+    service = ChunkingService(db_session)
+
+    chunks = service.build_chunks(
+        extracted_content.id
+    )
+
+    assert chunks[0].extracted_content_id == (
+        extracted_content.id
+    )
+    assert chunks[0].document_version_id == (
+        extracted_content.document_version_id
+    )
+    assert chunks[0].chunk_index == 0
+    assert chunks[0].locator == (
+        f"extracted_content:{extracted_content.id}:chunk:0"
+    )
+    assert chunks[0].vector_id is None

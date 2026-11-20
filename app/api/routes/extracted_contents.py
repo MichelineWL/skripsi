@@ -20,6 +20,9 @@ from app.repositories.extracted_content_repository import (
 )
 from app.services.extraction_service import ExtractionService
 
+from app.api.schemas.ingestion import IngestionResponse
+from app.core.dependencies import get_ingestion_service
+from app.services.ingestion_service import IngestionService
 
 router = APIRouter(
     prefix="/documents",
@@ -37,6 +40,10 @@ DbSessionDep = Annotated[
     Depends(get_db),
 ]
 
+IngestionServiceDep = Annotated[
+    IngestionService,
+    Depends(get_ingestion_service),
+]
 
 @router.post(
     "/{document_id}/versions/{version_id}/extract",
@@ -133,3 +140,55 @@ def get_extracted_content(
         )
 
     return extracted_content
+
+@router.post(
+    "/{document_id}/versions/{version_id}/extracted-contents/{extracted_content_id}/ingest",
+    response_model=IngestionResponse,
+)
+def ingest_extracted_content(
+    document_id: int,
+    version_id: int,
+    extracted_content_id: int,
+    db: DbSessionDep,
+    service: IngestionServiceDep,
+):
+    version_repository = DocumentVersionRepository(db)
+    extracted_repository = ExtractedContentRepository(db)
+
+    version = version_repository.get_by_id(version_id)
+
+    if version is None or version.document_id != document_id:
+        raise HTTPException(
+            status_code=404,
+            detail="Document version not found.",
+        )
+
+    extracted_content = extracted_repository.get_by_id(
+        extracted_content_id
+    )
+
+    if (
+        extracted_content is None
+        or extracted_content.document_version_id != version_id
+    ):
+        raise HTTPException(
+            status_code=404,
+            detail="Extracted content not found.",
+        )
+
+    try:
+        return service.ingest_extracted_content(
+            extracted_content_id
+        )
+
+    except ResourceNotFoundError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
+
+    except BusinessRuleError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=str(exc),
+        ) from exc

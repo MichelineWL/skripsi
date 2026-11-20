@@ -23,7 +23,7 @@ class ChunkingService:
             ExtractedContentRepository(db)
         )
 
-    def chunk_extracted_content(
+    def build_chunks(
         self,
         extracted_content_id: int,
     ) -> list[Chunk]:
@@ -52,7 +52,7 @@ class ChunkingService:
                 "No chunks could be generated."
             )
 
-        chunks = [
+        return [
             Chunk(
                 extracted_content_id=extracted_content.id,
                 document_version_id=(
@@ -71,13 +71,21 @@ class ChunkingService:
             for index, chunk_text in enumerate(chunk_texts)
         ]
 
-        # Replace previous chunks so repeated requests
-        # do not create duplicates.
+    def chunk_extracted_content(
+        self,
+        extracted_content_id: int,
+    ) -> list[Chunk]:
+        chunks = self.build_chunks(
+            extracted_content_id
+        )
+
+        # Mempertahankan perilaku lama:
+        # replace chunk lama dan simpan hasil terbaru.
         return self.chunk_repository.replace_by_extracted_content(
             extracted_content_id=extracted_content_id,
             chunks=chunks,
         )
-    
+
     def get_chunks(
         self,
         extracted_content_id: int,
