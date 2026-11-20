@@ -10,6 +10,7 @@ from app.services.division_service import DivisionService
 from app.services.program_service import ProgramService
 from app.services.document_service import DocumentService
 from app.services.document_version_service import DocumentVersionService
+from app.services.extraction_service import ExtractionService
 
 def get_organization_service(
     db: Annotated[Session, Depends(get_db)],
@@ -40,3 +41,8 @@ def get_document_version_service(
     db: Annotated[Session, Depends(get_db)],
 ) -> DocumentVersionService:
     return DocumentVersionService(db)
+
+def get_extraction_service(
+    db: Annotated[Session, Depends(get_db)],
+) -> ExtractionService:
+    return ExtractionService(db)
