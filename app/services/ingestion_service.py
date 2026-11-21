@@ -1,4 +1,9 @@
+from sqlalchemy import select
+
 from app.core.exceptions import BusinessRuleError
+from app.models.document import Document
+from app.models.document_version import DocumentVersion
+from app.models.extracted_content import ExtractedContent
 from app.repositories.chunk_repository import ChunkRepository
 from app.services.chunking_service import ChunkingService
 from app.services.embedding_service import EmbeddingService
@@ -36,6 +41,33 @@ class IngestionService:
         self,
         extracted_content_id: int,
     ) -> dict:
+        # Resolve organization dari relasi dokumen.
+        statement = (
+            select(Document.organization_id)
+            .join(
+                DocumentVersion,
+                DocumentVersion.document_id
+                == Document.id,
+            )
+            .join(
+                ExtractedContent,
+                ExtractedContent.document_version_id
+                == DocumentVersion.id,
+            )
+            .where(
+                ExtractedContent.id
+                == extracted_content_id
+            )
+        )
+
+        organization_id = self.db.scalar(statement)
+
+        if organization_id is None:
+            raise BusinessRuleError(
+                "Organization could not be resolved "
+                "for extracted content."
+            )
+
         # Build chunk baru tanpa menghapus chunk lama.
         new_chunks = self.chunking_service.build_chunks(
             extracted_content_id
@@ -63,6 +95,7 @@ class IngestionService:
                 )
 
                 payload = {
+                    "organization_id": organization_id,
                     "extracted_content_id": (
                         chunk.extracted_content_id
                     ),

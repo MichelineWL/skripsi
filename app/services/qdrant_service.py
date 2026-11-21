@@ -7,6 +7,9 @@ from qdrant_client.models import (
     PointStruct,
     PointIdsList,
     VectorParams,
+    Filter,
+    FieldCondition,
+    MatchValue,
 )
 
 from app.core.config import settings
@@ -99,9 +102,9 @@ class QdrantService:
             self.client.delete(
                 collection_name=self.collection_name,
                 points_selector=PointIdsList(
-                points=vector_ids
-            	),
-            	wait=True,
+                    points=vector_ids,
+                ),
+                wait=True,
             )
 
         except Exception as exc:
@@ -113,6 +116,7 @@ class QdrantService:
         self,
         query_vector: list[float],
         limit: int = 5,
+        organization_id: int | None = None,
     ) -> list:
         if not query_vector:
             raise BusinessRuleError(
@@ -130,11 +134,34 @@ class QdrantService:
                 "Search limit must be greater than zero."
             )
 
+        if (
+            organization_id is not None
+            and organization_id <= 0
+        ):
+            raise BusinessRuleError(
+                "Organization ID must be greater than zero."
+            )
+
+        query_filter = None
+
+        if organization_id is not None:
+            query_filter = Filter(
+                must=[
+                    FieldCondition(
+                        key="organization_id",
+                        match=MatchValue(
+                            value=organization_id,
+                        ),
+                    ),
+                ],
+            )
+
         try:
             response = self.client.query_points(
                 collection_name=self.collection_name,
                 query=query_vector,
                 limit=limit,
+                query_filter=query_filter,
                 with_payload=True,
             )
 

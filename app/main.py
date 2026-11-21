@@ -10,6 +10,7 @@ from app.api.routes.document_versions import router as document_versions_router
 from app.api.routes.extracted_contents import (
     router as extracted_contents_router,
 )
+from app.api.routes.retrieval import router as retrieval_router
 
 app = FastAPI(
     title=settings.app_name,
@@ -25,6 +26,7 @@ app.include_router(programs_router)
 app.include_router(documents_router)
 app.include_router(document_versions_router)
 app.include_router(extracted_contents_router)
+app.include_router(retrieval_router)
 
 @app.get("/health")
 def health_check():

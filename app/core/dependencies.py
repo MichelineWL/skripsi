@@ -12,6 +12,7 @@ from app.services.document_service import DocumentService
 from app.services.document_version_service import DocumentVersionService
 from app.services.extraction_service import ExtractionService
 from app.services.ingestion_service import IngestionService
+from app.services.retrieval_service import RetrievalService
 
 def get_organization_service(
     db: Annotated[Session, Depends(get_db)],
@@ -52,6 +53,14 @@ def get_ingestion_service(
     db: Annotated[Session, Depends(get_db)],
 ):
     service = IngestionService(db)
+
+    try:
+        yield service
+    finally:
+        service.qdrant_service.close()
+
+def get_retrieval_service():
+    service = RetrievalService()
 
     try:
         yield service

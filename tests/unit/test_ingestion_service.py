@@ -4,6 +4,20 @@ from app.core.exceptions import BusinessRuleError
 from app.services.ingestion_service import IngestionService
 
 
+class FakeDB:
+    def __init__(self, organization_id=1):
+        self.organization_id = organization_id
+        self.rollback_called = False
+        self.scalar_calls = []
+
+    def scalar(self, statement):
+        self.scalar_calls.append(statement)
+        return self.organization_id
+
+    def rollback(self):
+        self.rollback_called = True
+
+
 class FakeChunk:
     def __init__(
         self,
@@ -98,6 +112,7 @@ class FakeQdrantService:
 @pytest.fixture
 def ingestion_dependencies(monkeypatch):
     repository = FakeChunkRepository()
+
     chunking_service = FakeChunkingService(
         chunks=[
             FakeChunk(chunk_index=0),
@@ -107,13 +122,16 @@ def ingestion_dependencies(monkeypatch):
             ),
         ]
     )
+
     embedding_service = FakeEmbeddingService(
         vectors=[
             [0.1, 0.2, 0.3],
             [0.4, 0.5, 0.6],
         ]
     )
+
     qdrant_service = FakeQdrantService()
+    fake_db = FakeDB(organization_id=1)
 
     monkeypatch.setattr(
         "app.services.ingestion_service.ChunkRepository",
@@ -121,7 +139,7 @@ def ingestion_dependencies(monkeypatch):
     )
 
     service = IngestionService(
-        db=object(),
+        db=fake_db,
         chunking_service=chunking_service,
         embedding_service=embedding_service,
         qdrant_service=qdrant_service,
@@ -129,6 +147,7 @@ def ingestion_dependencies(monkeypatch):
 
     return {
         "service": service,
+        "db": fake_db,
         "repository": repository,
         "chunking": chunking_service,
         "embedding": embedding_service,
@@ -162,6 +181,8 @@ def test_ingestion_successfully_processes_chunks(
         is not None
     )
 
+    assert len(dependencies["db"].scalar_calls) == 1
+
 
 def test_ingestion_assigns_vector_ids_to_chunks(
     ingestion_dependencies,
@@ -191,6 +212,7 @@ def test_ingestion_saves_correct_qdrant_payload(
 
     assert payload["extracted_content_id"] == 1
     assert payload["document_version_id"] == 1
+    assert payload["organization_id"] == 1
     assert payload["chunk_index"] == 0
     assert payload["content"] == "Test chunk content"
     assert payload["locator"] == "page:1"
@@ -238,14 +260,7 @@ def test_ingestion_rolls_back_when_vector_storage_fails(
 
     dependencies["qdrant"].fail_upsert = True
 
-    class FakeDB:
-        def __init__(self):
-            self.rollback_called = False
-
-        def rollback(self):
-            self.rollback_called = True
-
-    fake_db = FakeDB()
+    fake_db = FakeDB(organization_id=1)
 
     service = IngestionService(
         db=fake_db,
